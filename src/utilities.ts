@@ -1,7 +1,7 @@
 import bowser from 'bowser'
 import BigNumber from 'bignumber.js'
 
-import { WalletInterface, QueryablePromise } from './interfaces'
+import { WalletInterface } from './interfaces'
 
 export function getNetwork(provider: any): Promise<number | any> {
   return new Promise((resolve, reject) => {
@@ -13,7 +13,8 @@ export function getNetwork(provider: any): Promise<number | any> {
       },
       (e: any, res: any) => {
         e && reject(e)
-        resolve(Number(res && res.result))
+        const result = res && res.result
+        resolve(result && Number(result))
       }
     )
   })
@@ -29,7 +30,8 @@ export function getAddress(provider: any): Promise<string | any> {
       },
       (e: any, res: any) => {
         e && reject(e)
-        resolve(res && res.result && res.result[0])
+        const result = res && res.result && res.result[0]
+        resolve(result)
       }
     )
   })
@@ -52,7 +54,8 @@ export function getBalance(provider: any): Promise<string | any> {
       },
       (e: any, res: any) => {
         e && reject(e)
-        resolve(res && res.result && new BigNumber(res.result).toString(10))
+        const result = res && res.result
+        resolve(result && new BigNumber(result).toString(10))
       }
     )
   })
@@ -70,7 +73,7 @@ export function createModernProviderInterface(provider: any): WalletInterface {
             // get the initial value
             getAddress(provider).then(func)
             provider.on('accountsChanged', (accounts: string[]) =>
-              func(accounts[0])
+              func(accounts && accounts[0])
             )
           }
         }
@@ -82,7 +85,9 @@ export function createModernProviderInterface(provider: any): WalletInterface {
           onChange: (func: (val: string | number) => void) => {
             // get initial value
             getNetwork(provider).then(func)
-            provider.on('networkChanged', func)
+            provider.on('networkChanged', (netId: string | number) =>
+              func(netId && Number(netId))
+            )
           }
         }
       : { get: () => getNetwork(provider) },
@@ -148,6 +153,10 @@ export function getProviderName(provider: any): string | undefined {
     return 'Toshi'
   }
 
+  if (provider.isTorus) {
+    return 'Torus'
+  }
+
   if (provider.isCipher) {
     return 'Cipher'
   }
@@ -171,7 +180,7 @@ export function getDeviceInfo() {
   const { type } = browser.getPlatform()
 
   return {
-    isMobile: type !== 'desktop',
+    isMobile: type ? type !== 'desktop' : window.innerWidth < 600,
     os: name
   }
 }
@@ -224,36 +233,10 @@ export function makeCancelable(promise: any) {
   })
 
   wrappedPromise.cancel = () => {
-    rejectFn('poop')
+    rejectFn('canceled')
   }
 
   return wrappedPromise
-}
-
-export function makeQueryablePromise(promise: any): QueryablePromise {
-  let isResolved = false
-  let isRejected = false
-
-  promise.then(function(v: any) {
-    isResolved = true
-    return v
-  })
-
-  promise.catch(() => {
-    console.log('caught 2')
-    isRejected = true
-  })
-
-  promise.isFulfilled = function() {
-    return isResolved || isRejected
-  }
-  promise.isResolved = function() {
-    return isResolved
-  }
-  promise.isRejected = function() {
-    return isRejected
-  }
-  return promise
 }
 
 export function isPromise(val: any): val is Promise<any> {

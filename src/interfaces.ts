@@ -17,7 +17,7 @@ export interface Subscriptions {
 export interface WalletSelectModule {
   heading: string
   description: string
-  wallets: Array<WalletModule | WalletInit>
+  wallets: Array<WalletModule | WalletInitOptions>
 }
 
 export interface WalletCheckModule {
@@ -75,6 +75,7 @@ export interface WalletModule {
     instance?: any
   }>
   link?: string
+  url?: string
   installMessage?: (wallets: {
     currentWallet: string | undefined
     selectedWallet: string
@@ -93,6 +94,10 @@ export interface Helpers {
   getAddress: (provider: any) => Promise<string | any>
   getNetwork: (provider: any) => Promise<number | any>
   getBalance: (provider: any) => Promise<string | any>
+  resetWalletState: (options?: {
+    disconnected: boolean
+    walletName: string
+  }) => void
 }
 
 export interface WalletInterface {
@@ -107,7 +112,7 @@ export interface WalletInterface {
 
 export interface StateSyncer {
   get?: () => Promise<string | number | null>
-  onChange?: (updater: (val: number | string) => void) => void
+  onChange?: (updater: (val: number | string | undefined) => void) => void
 }
 
 export interface Wallet {
@@ -118,8 +123,7 @@ export interface Wallet {
   loading?: Promise<undefined>
 }
 
-export interface SdkWalletOptions {
-  apiKey: string
+export interface CommonWalletOptions {
   networkId: number
   preferred?: boolean
   label?: string
@@ -127,23 +131,28 @@ export interface SdkWalletOptions {
   svg?: string
 }
 
-export interface WalletConnectOptions {
-  infuraKey: string
-  preferred?: boolean
-  label?: string
-  iconSrc?: string
-  svg?: string
+export interface SdkWalletOptions {
+  apiKey: string
 }
 
-export interface WalletInit {
+export interface WalletConnectOptions {
+  infuraKey: string
+}
+
+export interface TorusOptions {
+  loginMethod?: 'google' | 'facebook' | 'twitch' | 'reddit' | 'discord'
+  buildEnv?: 'production' | 'development' | 'staging' | 'testing'
+  showTorusButton?: boolean
+  buttonPosition?: 'top-left' | 'top-right' | 'bottom-right' | 'bottom-left'
+  enableLogging?: boolean
+}
+
+export interface WalletInitOptions
+  extends CommonWalletOptions,
+    SdkWalletOptions,
+    WalletConnectOptions,
+    TorusOptions {
   walletName: string
-  preferred?: boolean
-  apiKey?: string
-  infuraKey?: string
-  networkId?: number
-  label?: string
-  iconSrc?: string
-  svg?: string
 }
 
 export interface WalletCheckInit {
@@ -175,6 +184,7 @@ export interface ConfigOptions {
 export interface API {
   walletSelect: WalletSelectFunction
   walletCheck: WalletCheck
+  walletReset: () => void
   config: Config
   getState: GetState
 }
@@ -188,7 +198,7 @@ export interface WritableStore {
 export interface WalletInterfaceStore {
   subscribe: (subscriber: (store: any) => void) => () => void
   update: (
-    updater: (walletInterface: WalletInterface | null) => WalletInterface
+    updater: (walletInterface: WalletInterface | null) => WalletInterface | null
   ) => void
   set: (walletInterface: WalletInterface) => void | never
 }
@@ -221,10 +231,4 @@ export interface AppState {
 
 export interface CancelablePromise extends Promise<any> {
   cancel: () => void
-}
-
-export interface QueryablePromise extends CancelablePromise {
-  isFulfilled: () => boolean
-  isResolved: () => boolean
-  isRejected: () => boolean
 }
